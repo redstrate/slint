@@ -1653,6 +1653,7 @@ pub mod ffi {
     #![allow(clippy::missing_safety_doc)]
     #![allow(missing_docs)]
 
+    use raw_window_handle_06::HasRawWindowHandle;
     use super::*;
     use crate::SharedVector;
     use crate::api::{RenderingNotifier, RenderingState, SetRenderingNotifierError};
@@ -2241,7 +2242,7 @@ pub mod ffi {
     ) -> isize {
         unsafe {
             let window_adapter = &*(handle as *const Rc<dyn WindowAdapter>);
-            match window_adapter.window_handle_06().unwrap().as_raw() {
+            match window_adapter.internal(crate::InternalToken).unwrap().window_handle_06_rc().unwrap().as_ref().raw_window_handle().unwrap() {
                 raw_window_handle_06::RawWindowHandle::Win32(win) => win.hwnd.into(),
                 _ => unreachable!()
             }
