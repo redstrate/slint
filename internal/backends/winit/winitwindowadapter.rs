@@ -379,6 +379,8 @@ impl WinitWindowAdapter {
         #[cfg(any(enable_accesskit, muda))] proxy: EventLoopProxy<SlintEvent>,
         #[cfg(all(muda, target_os = "macos"))] muda_enable_default_menu_bar: bool,
     ) -> Rc<Self> {
+        std::println!("Creating winit instance!");
+
         let self_rc = Rc::new_cyclic(|self_weak| Self {
             shared_backend_data: shared_backend_data.clone(),
             window: OnceCell::from(corelib::api::Window::new(self_weak.clone() as _)),

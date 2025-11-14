@@ -148,6 +148,7 @@ pub trait WindowAdapter {
     fn window_handle_06(
         &self,
     ) -> Result<raw_window_handle_06::WindowHandle<'_>, raw_window_handle_06::HandleError> {
+        std::println!("a");
         Err(raw_window_handle_06::HandleError::NotSupported)
     }
 
@@ -156,6 +157,7 @@ pub trait WindowAdapter {
     fn display_handle_06(
         &self,
     ) -> Result<raw_window_handle_06::DisplayHandle<'_>, raw_window_handle_06::HandleError> {
+    std::println!("b");
         Err(raw_window_handle_06::HandleError::NotSupported)
     }
 }
@@ -233,6 +235,7 @@ pub trait WindowAdapterInternal {
         std::sync::Arc<dyn raw_window_handle_06::HasWindowHandle>,
         raw_window_handle_06::HandleError,
     > {
+    std::println!("c");
         Err(raw_window_handle_06::HandleError::NotSupported)
     }
 
@@ -244,6 +247,7 @@ pub trait WindowAdapterInternal {
         std::sync::Arc<dyn raw_window_handle_06::HasDisplayHandle>,
         raw_window_handle_06::HandleError,
     > {
+    std::println!("d");
         Err(raw_window_handle_06::HandleError::NotSupported)
     }
 
@@ -2225,6 +2229,21 @@ pub mod ffi {
                 true
             } else {
                 false
+            }
+        }
+    }
+
+    /// TODO: write docs
+    #[unsafe(no_mangle)]
+    #[cfg(feature = "raw-window-handle-06")]
+    pub unsafe extern "C" fn slint_windowrc_get_window_handle(
+        handle: *const WindowAdapterRcOpaque,
+    ) -> isize {
+        unsafe {
+            let window_adapter = &*(handle as *const Rc<dyn WindowAdapter>);
+            match window_adapter.window_handle_06().unwrap().as_raw() {
+                raw_window_handle_06::RawWindowHandle::Win32(win) => win.hwnd.into(),
+                _ => unreachable!()
             }
         }
     }

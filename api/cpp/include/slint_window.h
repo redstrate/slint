@@ -637,6 +637,11 @@ public:
         }
     }
 
+    int64_t hwnd() const
+    {
+        return cbindgen_private::slint_windowrc_get_window_handle(&inner.handle());
+    }
+
     /// \private
     private_api::WindowAdapterRc &window_handle() { return inner; }
     /// \private
