@@ -1,0 +1,29 @@
+# Copyright © SixtyFPS GmbH <info@slint.dev>
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+
+[package]
+name = "slint-doc-extractor"
+description = "Tool used to extract docuumentation out of Slint files"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+categories = ["gui", "command-line-utilities", "development-tools"]
+
+[dependencies]
+i-slint-compiler = { workspace = true, features = ["default", "display-diagnostics"] }
+chrono = { version = "0.4.24", default-features = false, features = ["clock"] }
+clap = { workspace = true }
+polib = "0.2"
+smol_str = { workspace = true }
+
+[dev-dependencies]
+itertools = { workspace = true }
+
+[[bin]]
+name = "slint-doc-extractor"
+path = "main.rs"
