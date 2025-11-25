@@ -24,7 +24,9 @@ component Empty {
     //-is_internal
 }
 
+/// By default, a Rectangle is just an empty item that shows nothing. By setting a color or configuring a border, it’s then possible to draw a rectangle on the screen.
 component Rectangle inherits Empty {
+    /// Background of this Rectangle.
     in property <brush> background;
     in property <brush> color <=> background;
 }
@@ -32,6 +34,7 @@ component Rectangle inherits Empty {
 component BasicBorderRectangle inherits Rectangle {
     in property <length> border-width;
     in property <length> border-radius;
+    // The color of the border.
     in property <brush> border-color;
 }
 

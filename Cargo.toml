@@ -74,6 +74,7 @@ members = [
   'tools/updater',
   'tools/viewer',
   'tools/tr-extractor',
+  'tools/doc-extractor',
   "ui-libraries/material/examples/gallery",
   'xtask',
 ]
