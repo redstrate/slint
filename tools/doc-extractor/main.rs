@@ -15,9 +15,6 @@ struct Cli {
     #[arg(name = "path to .slint file(s)", action)]
     paths: Vec<std::path::PathBuf>,
 
-    #[arg(long = "default-domain", short = 'd')]
-    domain: Option<String>,
-
     #[arg(
         name = "file",
         short = 'o',
@@ -25,26 +22,11 @@ struct Cli {
     )]
     output: Option<std::path::PathBuf>,
 
-    //#[arg(long = "omit-header", help = r#"Don’t write header with ‘msgid ""’ entry"#)]
-    //omit_header: bool,
-    //
-    //#[arg(long = "copyright-holder", help = "Set the copyright holder in the output")]
-    //copyright_holder: Option<String>,
-    //
     #[arg(long = "package-name", help = "Set the package name in the header of the output")]
     package_name: Option<String>,
 
     #[arg(long = "package-version", help = "Set the package version in the header of the output")]
     package_version: Option<String>,
-    //
-    // #[arg(
-    //     long = "msgid-bugs-address",
-    //     help = "Set the reporting address for msgid bugs. This is the email address or URL to which the translators shall report bugs in the untranslated strings"
-    // )]
-    // msgid_bugs_address: Option<String>,
-    #[arg(long = "join-existing", short = 'j')]
-    /// Join messages with existing file
-    join_existing: bool,
 }
 
 fn main() -> std::io::Result<()> {
@@ -52,12 +34,9 @@ fn main() -> std::io::Result<()> {
 
     let output = args
         .output
-        .unwrap_or_else(|| format!("{}.po", args.domain.as_deref().unwrap_or("messages")).into());
+        .unwrap_or_else(|| "test.md".into());
 
-    let mut messages = if args.join_existing {
-        polib::po_file::parse(&output)
-            .map_err(|x| std::io::Error::new(std::io::ErrorKind::Other, x))?
-    } else {
+    let mut messages = {
         let package = args.package_name.as_ref().map(|x| x.as_ref()).unwrap_or("PACKAGE");
         let version = args.package_version.as_ref().map(|x| x.as_ref()).unwrap_or("VERSION");
         let metadata = polib::metadata::CatalogMetadata {
@@ -97,75 +76,8 @@ fn process_file(path: std::path::PathBuf, messages: &mut Messages) -> std::io::R
 
 fn visit_node(node: SyntaxNode, results: &mut Messages, current_context: Option<SmolStr>) {
     for n in node.children() {
-        if n.kind() == SyntaxKind::AtTr {
-            if let Some(msgid) = n
-                .child_text(SyntaxKind::StringLiteral)
-                .and_then(|s| i_slint_compiler::literals::unescape_string(&s))
-            {
-                let tr = syntax_nodes::AtTr::from(n.clone());
-                let msgctxt = tr
-                    .TrContext()
-                    .and_then(|n| n.child_text(SyntaxKind::StringLiteral))
-                    .and_then(|s| i_slint_compiler::literals::unescape_string(&s))
-                    .or_else(|| current_context.clone());
-                let plural = tr
-                    .TrPlural()
-                    .and_then(|n| n.child_text(SyntaxKind::StringLiteral))
-                    .and_then(|s| i_slint_compiler::literals::unescape_string(&s));
-
-                let update = |msg: &mut dyn polib::message::MessageMutView| {
-                    let span = node.span();
-                    if span.is_valid() {
-                        let (line, _) = node.source_file.line_column(
-                            span.offset,
-                            i_slint_compiler::diagnostics::ByteFormat::Utf8,
-                        );
-                        if line > 0 {
-                            let source = msg.source_mut();
-                            let path = node.source_file.path().to_string_lossy();
-                            if source.is_empty() {
-                                *source = format!("{path}:{line}");
-                            } else {
-                                write!(source, " {path}:{line}").unwrap();
-                            }
-                        }
-                    }
-
-                    let comment = msg.comments_mut();
-                    if comment.is_empty() {
-                        if let Some(c) = tr
-                            .child_token(SyntaxKind::StringLiteral)
-                            .and_then(get_comments_before_line)
-                            .or_else(|| tr.first_token().and_then(get_comments_before_line))
-                        {
-                            *comment = c;
-                        }
-                    }
-                };
-
-                if let Some(mut x) =
-                    results.find_message_mut(msgctxt.as_deref(), &msgid, plural.as_deref())
-                {
-                    update(&mut x)
-                } else {
-                    let mut builder = if let Some(plural) = plural {
-                        let mut builder = polib::message::Message::build_plural();
-                        builder.with_msgid_plural(plural.into());
-                        // Workaround for #4238 : poedit doesn't add the plural by default.
-                        builder.with_msgstr_plural(vec![String::new(), String::new()]);
-                        builder
-                    } else {
-                        polib::message::Message::build_singular()
-                    };
-                    builder.with_msgid(msgid.into());
-                    if let Some(msgctxt) = msgctxt {
-                        builder.with_msgctxt(msgctxt.into());
-                    }
-                    let mut msg = builder.done();
-                    update(&mut msg);
-                    results.append_or_update(msg);
-                }
-            }
+        if n.kind() == SyntaxKind::Element {
+            dbg!(&n);
         }
         let current_context = syntax_nodes::Component::new(n.clone())
             .and_then(|x| {
