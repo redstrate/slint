@@ -314,7 +314,8 @@
         "springgreen",
         "steelblue",
         "whitesmoke",
-        "yellowgreen"
+        "yellowgreen",
+        "hotspot"
     ],
     "ignorePaths": [
         ".github/**",

@@ -266,7 +266,7 @@ pub struct TestingWindow {
     window: i_slint_core::api::Window,
     size: Cell<PhysicalSize>,
     pub ime_requests: RefCell<Vec<InputMethodRequest>>,
-    mouse_cursor: Cell<i_slint_core::items::MouseCursor>,
+    mouse_cursor: RefCell<i_slint_core::cursor::MouseCursorInner>,
     all_item_trees: CheckAllItemTreesUnregistered,
     pub open_url: Rc<RefCell<Option<SharedString>>>,
     pub debug_logs: Rc<RefCell<Vec<String>>>,
@@ -279,8 +279,8 @@ impl TestingWindow {
     }
 
     #[allow(dead_code)] // Used by various tests
-    pub fn mouse_cursor(&self) -> i_slint_core::items::MouseCursor {
-        self.mouse_cursor.get()
+    pub fn mouse_cursor(&self) -> i_slint_core::cursor::MouseCursorInner {
+        self.mouse_cursor.borrow().clone()
     }
 
     #[allow(dead_code)]
@@ -299,8 +299,8 @@ impl WindowAdapterInternal for TestingWindow {
         self.ime_requests.borrow_mut().push(request)
     }
 
-    fn set_mouse_cursor(&self, cursor: i_slint_core::items::MouseCursor) {
-        self.mouse_cursor.set(cursor);
+    fn set_mouse_cursor(&self, cursor: i_slint_core::cursor::MouseCursorInner) {
+        self.mouse_cursor.replace(cursor);
     }
 
     fn register_item_tree(&self, item_tree: i_slint_core::item_tree::ItemTreeRefPin) {

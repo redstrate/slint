@@ -361,7 +361,7 @@ fn gen_corelib(
         "TextWrap",
         "ImageFit",
         "FillRule",
-        "MouseCursor",
+        "MouseCursorInner",
         "InputType",
         "StandardButtonKind",
         "DialogButtonRole",
@@ -828,6 +828,16 @@ fn gen_corelib(
         .export
         .pre_body
         .insert("SystemTrayIconDataBox".to_owned(), "struct SystemTrayIconData;".into());
+    config.export.body.insert(
+        "MouseCursorInner".to_owned(),
+        "    constexpr MouseCursorInner() : tag{}, built_in{} {}
+    MouseCursorInner(MouseCursorInner::Tag tag, BuiltInMouseCursor cursor) : tag(tag), built_in{cursor} {}
+    MouseCursorInner(MouseCursorInner::Tag tag, Image image, int hotspot_x, int hotspot_y) : tag(tag), custom_mouse_cursor{image, hotspot_x, hotspot_y} {}
+    MouseCursorInner(const MouseCursorInner &other) { cbindgen_private::slint_mouse_cursor_inner_clone(this, &other); }
+    MouseCursorInner& operator=(const MouseCursorInner &other) { tag = other.tag; custom_mouse_cursor = other.custom_mouse_cursor; built_in = other.built_in; return *this; }
+    ~MouseCursorInner() {}
+        ".into()
+    );
 
     cbindgen::Builder::new()
         .with_config(config)
@@ -852,7 +862,7 @@ fn gen_corelib(
         .with_include("private/slint_data_transfer_internal.h")
         .with_include("private/slint_data_transfer.h")
         .with_after_include(
-            r"
+            r#"
 namespace slint {
     namespace private_api { class WindowAdapterRc; }
     namespace cbindgen_private {
@@ -866,9 +876,15 @@ namespace slint {
         using types::IntRect;
         using types::Size;
         using types::MouseEvent;
+        struct MouseCursorInner;
+
+        extern "C" {
+            void slint_mouse_cursor_inner_clone(MouseCursorInner *out, const MouseCursorInner *src);
+            bool slint_mouse_cursor_inner_eq(const MouseCursorInner *a, const MouseCursorInner *b);
+        }
     }
     template<typename ModelData> class Model;
-}",
+}"#,
         )
         .with_trailer(gen_item_declarations(&items))
         .generate()

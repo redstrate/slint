@@ -92,7 +92,7 @@ impl Item for ComplexText {
         _: &MouseEvent,
         _window_adapter: &Rc<dyn WindowAdapter>,
         _self_rc: &ItemRc,
-        _: &mut super::MouseCursor,
+        _: &mut super::MouseCursorInner,
     ) -> InputEventFilterResult {
         InputEventFilterResult::ForwardAndIgnore
     }
@@ -102,7 +102,7 @@ impl Item for ComplexText {
         _: &MouseEvent,
         _window_adapter: &Rc<dyn WindowAdapter>,
         _self_rc: &ItemRc,
-        _: &mut super::MouseCursor,
+        _: &mut super::MouseCursorInner,
     ) -> InputEventResult {
         InputEventResult::EventIgnored
     }
@@ -276,7 +276,7 @@ impl Item for StyledTextItem {
         _: &MouseEvent,
         _window_adapter: &Rc<dyn WindowAdapter>,
         _self_rc: &ItemRc,
-        _: &mut super::MouseCursor,
+        _: &mut super::MouseCursorInner,
     ) -> InputEventFilterResult {
         InputEventFilterResult::ForwardEvent
     }
@@ -287,7 +287,7 @@ impl Item for StyledTextItem {
         event: &MouseEvent,
         window_adapter: &Rc<dyn WindowAdapter>,
         self_rc: &ItemRc,
-        cursor: &mut super::MouseCursor,
+        cursor: &mut super::MouseCursorInner,
     ) -> InputEventResult {
         #[cfg(feature = "shared-parley")]
         let find_link = |position: &LogicalPoint| {
@@ -312,7 +312,7 @@ impl Item for StyledTextItem {
                 touch_finger_id: _,
             } => {
                 if let Some(link) = find_link(position) {
-                    *cursor = super::MouseCursor::Pointer;
+                    *cursor = super::MouseCursorInner::BuiltIn(super::BuiltInMouseCursor::Pointer);
                     Self::FIELD_OFFSETS.link_clicked().apply_pin(self).call(&(link.into(),));
                 }
                 InputEventResult::EventAccepted
@@ -322,7 +322,7 @@ impl Item for StyledTextItem {
             | MouseEvent::Pressed { position, .. }
             | MouseEvent::Released { position, .. } => {
                 if find_link(position).is_some() {
-                    *cursor = super::MouseCursor::Pointer;
+                    *cursor = super::MouseCursorInner::BuiltIn(super::BuiltInMouseCursor::Pointer);
                 }
                 InputEventResult::EventAccepted
             }
@@ -498,7 +498,7 @@ impl Item for SimpleText {
         _: &MouseEvent,
         _window_adapter: &Rc<dyn WindowAdapter>,
         _self_rc: &ItemRc,
-        _: &mut super::MouseCursor,
+        _: &mut super::MouseCursorInner,
     ) -> InputEventFilterResult {
         InputEventFilterResult::ForwardAndIgnore
     }
@@ -508,7 +508,7 @@ impl Item for SimpleText {
         _: &MouseEvent,
         _window_adapter: &Rc<dyn WindowAdapter>,
         _self_rc: &ItemRc,
-        _: &mut super::MouseCursor,
+        _: &mut super::MouseCursorInner,
     ) -> InputEventResult {
         InputEventResult::EventIgnored
     }
@@ -851,7 +851,7 @@ impl Item for TextInput {
         _: &MouseEvent,
         _window_adapter: &Rc<dyn WindowAdapter>,
         _self_rc: &ItemRc,
-        _: &mut super::MouseCursor,
+        _: &mut super::MouseCursorInner,
     ) -> InputEventFilterResult {
         InputEventFilterResult::ForwardEvent
     }
@@ -861,13 +861,13 @@ impl Item for TextInput {
         event: &MouseEvent,
         window_adapter: &Rc<dyn WindowAdapter>,
         self_rc: &ItemRc,
-        cursor: &mut super::MouseCursor,
+        cursor: &mut super::MouseCursorInner,
     ) -> InputEventResult {
         if !self.enabled() {
             return InputEventResult::EventIgnored;
         }
 
-        *cursor = super::MouseCursor::Text;
+        *cursor = super::MouseCursorInner::BuiltIn(super::BuiltInMouseCursor::Text);
 
         match event {
             MouseEvent::Pressed {

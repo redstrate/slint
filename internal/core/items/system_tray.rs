@@ -9,15 +9,14 @@
 
 #![allow(unsafe_code)]
 
+use crate::cursor::MouseCursorInner;
 use crate::graphics::Image;
 use crate::input::{
     FocusEvent, FocusEventResult, InputEventFilterResult, InputEventResult, InternalKeyEvent,
     KeyEventResult, MouseEvent,
 };
 use crate::item_rendering::CachedRenderingData;
-use crate::items::{
-    ColorScheme, Item, ItemConsts, ItemRc, MouseCursor, Orientation, RenderingResult, VoidArg,
-};
+use crate::items::{ColorScheme, Item, ItemConsts, ItemRc, Orientation, RenderingResult, VoidArg};
 use crate::layout::LayoutInfo;
 use crate::lengths::{LogicalRect, LogicalSize};
 #[cfg(feature = "rtti")]
@@ -394,7 +393,7 @@ impl Item for SystemTrayIcon {
         _: &MouseEvent,
         _window_adapter: &Rc<dyn WindowAdapter>,
         _self_rc: &ItemRc,
-        _: &mut MouseCursor,
+        _: &mut MouseCursorInner,
     ) -> InputEventFilterResult {
         InputEventFilterResult::ForwardAndIgnore
     }
@@ -404,7 +403,7 @@ impl Item for SystemTrayIcon {
         _: &MouseEvent,
         _window_adapter: &Rc<dyn WindowAdapter>,
         _self_rc: &ItemRc,
-        _: &mut MouseCursor,
+        _: &mut MouseCursorInner,
     ) -> InputEventResult {
         InputEventResult::EventIgnored
     }

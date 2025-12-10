@@ -179,7 +179,9 @@ pub fn extract_enum_docs(
     }
 
     if !include_experimental {
-        enums.retain(|name, _| !name.starts_with("FlexboxLayout"));
+        enums.retain(|name, _| {
+            !name.starts_with("FlexboxLayout") && !name.starts_with("BuiltInMouseCursor")
+        });
     }
 
     if sc_only {
