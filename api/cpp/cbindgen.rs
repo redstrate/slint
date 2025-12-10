@@ -336,7 +336,7 @@ fn gen_corelib(
         "TextWrap",
         "ImageFit",
         "FillRule",
-        "MouseCursor",
+        "MouseCursorInner",
         "InputType",
         "StandardButtonKind",
         "DialogButtonRole",
@@ -757,6 +757,15 @@ fn gen_corelib(
         .body
         .insert("Flickable".to_owned(), "    inline Flickable(); inline ~Flickable();".into());
     config.export.pre_body.insert("FlickableDataBox".to_owned(), "struct FlickableData;".into());
+    config.export.body.insert(
+        "MouseCursorInner".to_owned(),
+        "    constexpr MouseCursorInner() : tag{}, built_in{} {}
+    MouseCursorInner(MouseCursorInner::Tag tag, BuiltInMouseCursor cursor) : tag(tag), built_in(cursor) {}
+    MouseCursorInner(MouseCursorInner::Tag tag, Image image, int hotspot_x, int hotspot_y) : tag(tag), custom_mouse_cursor(image, hotspot_x, hotspot_y) {}
+    MouseCursorInner& operator=(const MouseCursorInner &other) { tag = other.tag; custom_mouse_cursor = other.custom_mouse_cursor; built_in = other.built_in; return *this; }
+    ~MouseCursorInner() {}
+        ".into()
+    );
 
     cbindgen::Builder::new()
         .with_config(config)

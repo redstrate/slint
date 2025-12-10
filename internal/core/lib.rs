@@ -35,6 +35,7 @@ pub mod api;
 pub mod callbacks;
 pub mod component_factory;
 pub mod context;
+pub mod cursor;
 pub mod date_time;
 pub mod debug_log;
 pub mod future;

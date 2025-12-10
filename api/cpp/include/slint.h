@@ -104,6 +104,17 @@ inline bool operator==(const EasingCurve &a, const EasingCurve &b)
     }
     return true;
 }
+inline bool operator==(const MouseCursorInner &a, const MouseCursorInner &b)
+{
+    if (a.tag != b.tag) {
+        return false;
+    } else if (a.tag == MouseCursorInner::Tag::CustomMouseCursor) {
+        return a.custom_mouse_cursor.image == b.custom_mouse_cursor.image
+                && a.custom_mouse_cursor.hotspot_x == b.custom_mouse_cursor.hotspot_x
+                && a.custom_mouse_cursor.hotspot_y == b.custom_mouse_cursor.hotspot_y;
+    }
+    return true;
+}
 }
 
 namespace private_api {
