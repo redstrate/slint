@@ -1362,6 +1362,7 @@ impl WindowInner {
 
     // Close the popup associated with the given popup window.
     fn close_popup_impl(&self, current_popup: &PopupWindow) {
+        std::dbg!("wowie");
         match &current_popup.location {
             PopupWindowLocation::ChildWindow(offset) => {
                 // Refresh the area that was previously covered by the popup.

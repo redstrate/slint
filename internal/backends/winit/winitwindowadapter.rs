@@ -5,6 +5,7 @@
 
 // cspell:ignore accesskit borderless corelib nesw webgl winit winsys xlib
 
+use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use core::cell::{Cell, RefCell};
 use core::pin::Pin;
 use std::rc::Rc;
@@ -15,7 +16,7 @@ use euclid::approxeq::ApproxEq;
 
 #[cfg(muda)]
 use i_slint_core::api::LogicalPosition;
-use i_slint_core::lengths::{LogicalInset, PhysicalPx, ScaleFactor};
+use i_slint_core::lengths::{LogicalInset, LogicalRect, PhysicalPx, ScaleFactor};
 use winit::event_loop::ActiveEventLoop;
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::WindowExtWebSys;
@@ -35,7 +36,7 @@ use corelib::items::{ItemRc, ItemRef};
 
 #[cfg(any(enable_accesskit, muda))]
 use crate::SlintEvent;
-use crate::{EventResult, SharedBackendData};
+use crate::{EventResult, SharedBackendData, WinitWindowAccessor};
 use corelib::Property;
 use corelib::api::PhysicalSize;
 use corelib::layout::Orientation;
@@ -45,9 +46,11 @@ use corelib::window::{WindowAdapter, WindowAdapterInternal, WindowInner};
 use corelib::{Coord, graphics::*};
 use i_slint_core::{self as corelib};
 use std::cell::OnceCell;
+use std::ops::Deref;
 #[cfg(any(enable_accesskit, muda))]
 use winit::event_loop::EventLoopProxy;
 use winit::window::{WindowAttributes, WindowButtons};
+use i_slint_core::api::{LogicalSize, WindowPosition, WindowSize};
 
 pub(crate) fn position_to_winit(pos: &corelib::api::WindowPosition) -> winit::dpi::Position {
     match pos {
@@ -368,6 +371,9 @@ pub struct WinitWindowAdapter {
     window_icon_cache_key: RefCell<Option<ImageCacheKey>>,
 
     frame_throttle: Box<dyn crate::frame_throttle::FrameThrottle>,
+
+    #[cfg(windows)]
+    parent_window: Cell<Option<winit::platform::windows::HWND>>,
 }
 
 impl WinitWindowAdapter {
@@ -411,6 +417,8 @@ impl WinitWindowAdapter {
             context_menu: Default::default(),
             #[cfg(all(muda, target_os = "macos"))]
             muda_enable_default_menu_bar,
+            #[cfg(windows)]
+            parent_window: Cell::new(None),
             window_icon_cache_key: Default::default(),
             frame_throttle: crate::frame_throttle::create_frame_throttle(
                 self_weak.clone(),
@@ -451,6 +459,13 @@ impl WinitWindowAdapter {
                     window_attributes = window_attributes.with_name(xdg_app_id.clone(), "");
                 }
             }
+        }
+
+        #[cfg(windows)]
+        if let Some(hwnd) = self.parent_window.get() {
+            use winit::platform::windows::WindowAttributesExtWindows;
+            window_attributes = window_attributes.with_owner_window(hwnd);
+            window_attributes = window_attributes.with_decorations(false);
         }
 
         // Never show the window right away, as we
@@ -737,6 +752,7 @@ impl WinitWindowAdapter {
     // Requests for the window to be resized. Returns true if the window was resized immediately,
     // or if it will be resized later (false).
     fn resize_window(&self, size: winit::dpi::Size) -> Result<bool, PlatformError> {
+        std::dbg!(std::backtrace::Backtrace::force_capture());
         match &*self.winit_window_or_none.borrow() {
             WinitWindowOrNone::HasWindow { window, .. } => {
                 if let Some(size) = window.request_inner_size(size) {
@@ -1139,6 +1155,7 @@ impl WindowAdapter for WinitWindowAdapter {
     }
 
     fn set_size(&self, size: corelib::api::WindowSize) {
+        std::dbg!(&size);
         self.has_explicit_size.set(true);
         // TODO: don't ignore error, propagate to caller
         self.resize_window(window_size_to_winit(&size)).ok();
@@ -1178,7 +1195,7 @@ impl WindowAdapter for WinitWindowAdapter {
         }
         winit_window_or_none.set_title(&properties.title());
         winit_window_or_none.set_decorations(
-            !window_item.no_frame() || winit_window_or_none.fullscreen().is_some(),
+            (!window_item.no_frame() || winit_window_or_none.fullscreen().is_some()) && !self.parent_window.get().is_some(),
         );
 
         let new_window_level = if window_item.always_on_top() {
@@ -1197,6 +1214,10 @@ impl WindowAdapter for WinitWindowAdapter {
         let mut must_resize = false;
         let existing_size = self.size.get().to_logical(sf);
 
+        std::dbg!(width);
+        std::dbg!(height);
+        std::dbg!(&existing_size);
+
         if width <= 0. || height <= 0. {
             must_resize = true;
             if width <= 0. {
@@ -1211,6 +1232,7 @@ impl WindowAdapter for WinitWindowAdapter {
         // But not if there is a pending resize in flight as that resize will reset these properties back
         if ((existing_size.width - width).abs() > 1. || (existing_size.height - height).abs() > 1.)
             && self.pending_requested_size.get().is_none()
+            && !self.has_explicit_size.get()
         {
             // If we're in fullscreen state, don't try to resize the window but maintain the surface
             // size we've been assigned to from the windowing system. Weston/Wayland don't like it
@@ -1515,12 +1537,57 @@ impl WindowAdapterInternal for WinitWindowAdapter {
         };
     }
 
+    fn create_popup(&self, geometry: LogicalRect) -> Option<Rc<dyn WindowAdapter>> {
+        // TODO: bad
+        let popup_window = i_slint_core::with_global_context(|| Err(PlatformError::NoPlatform), |ctx| {
+            ctx.platform().create_window_adapter()
+        }).unwrap();
+
+        if let Ok(ref popup_window) = popup_window {
+            // let hwnd = match self.window_handle_06().unwrap().as_raw() {
+            //     RawWindowHandle::Win32(win32) => win32.hwnd,
+            //     _ => panic!(),
+            // };
+
+            let refa = self.internal(i_slint_core::InternalToken)
+                .and_then(|wa| (wa as &dyn core::any::Any).downcast_ref::<WinitWindowAdapter>())
+                .unwrap()
+                .winit_window_or_none.borrow();
+
+            let WinitWindowOrNone::HasWindow { window, .. } = refa.deref() else {
+                panic!();
+            };
+
+            let hwnd = match window.raw_window_handle().unwrap() {
+                RawWindowHandle::Win32(win32) => win32.hwnd,
+                _ => panic!(),
+            };
+
+            //use winit::platform::windows::WindowExtWindows;
+
+            //let hwnd = window.get_hwnd();
+
+            popup_window.internal(i_slint_core::InternalToken)
+                .and_then(|wa| (wa as &dyn core::any::Any).downcast_ref::<WinitWindowAdapter>())
+                .unwrap()
+                .parent_window.replace(Some(hwnd.into()));
+
+            let position = self.position().unwrap().to_logical(window.scale_factor() as f32);
+
+            popup_window.set_position(WindowPosition::Logical(LogicalPosition::new(geometry.origin.x + position.x, geometry.origin.y + position.y)));
+            popup_window.set_size(WindowSize::Logical(LogicalSize::new(geometry.size.width, geometry.size.height)));
+            popup_window.set_visible(true).expect("TODO: panic message");
+        }
+
+        popup_window.ok()
+    }
+
     #[cfg(feature = "raw-window-handle-06")]
     fn window_handle_06_rc(
         &self,
     ) -> Result<Arc<dyn raw_window_handle::HasWindowHandle>, raw_window_handle::HandleError> {
         self.winit_window_or_none
-            .borrow()
+             .borrow()
             .as_window()
             .map_or(Err(raw_window_handle::HandleError::Unavailable), |window| Ok(window))
     }
